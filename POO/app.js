@@ -1,17 +1,26 @@
 const express = require('express')
-const mongoose = require('mongoose')
+const Series = require('./models/series');
+const series = require('./models/series');
+require ('./services/database') //requerimiento del servicio de db
 const app = express()
 
 require('dotenv').config();
 const port = process.env.PORT;
 
-mongoose.connect(process.env.MONGODB_URI, {
+app.use(express.json())
 
+app.get('/series', async (req, res) => {
+  try {
+    const serie = await series.find()
+    res.json(serie)
+
+  } catch (err) {
+    res.status(500).json({error: 'Error al obtener las series'})
+  }
 })
-.then(()=> console.log('Conexión exitosa a db'))
-.catch(err => console.error('Error de configuración', err))
 
-app.get('/', (req, res)=> res.send('¡¡Saludos es mi primer server!!'))
+
+
 app.listen(port, ()=>
     console.log(`Servidor corriendo exitosamente`)
 )
