@@ -34,7 +34,7 @@ app.get('/series/:id', async (req, res)=>{
     }
 })
 
-//Método POST: crea nueva serie
+//Método POST: este método crea una nueva serie
 app.post('/series', async (req, res)=>{
     try{
         const {name, capitulos, categorias, clasificacion, formato, duracion, fechaIngreso } = req.body
@@ -61,7 +61,7 @@ app.post('/series', async (req, res)=>{
     }
 })
 
-//Método PUT: actualiza la información de una serie existente según id
+//Método PUT: este método actualiza la información de una serie según id
 app.put('/series/:id', async (req, res)=>{
     try{
         const {name, capitulos, categorias, clasificacion, formato, duracion, fechaIngreso } = req.body
@@ -86,7 +86,7 @@ app.put('/series/:id', async (req, res)=>{
     }
 })
 
-//Metodo DELETE: elimina 
+//Metodo DELETE: elimina una serie mediante el ID
 app.delete('/series/:id', async ( req, res) => {
     try { 
         const serieEliminada = await series.findByIdAndDelete(req.params.id)
