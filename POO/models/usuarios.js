@@ -2,8 +2,8 @@ const mongoose = require('mongoose');
 
 const UsuarioSchema = new mongoose.Schema({
   nombre: { type: String, required: true },
-  plan: { type: String, enum: ['plan30', 'plan40', 'plan60'], required: true },
-  credito: { type: Number, required: true }, // Cantidad de envíos disponibles
+  paquete: { type: String, enum: ['paquete30', 'paquete40', 'paquete60'], required: true },
+  credito: { type: Number, required: true }, 
 });
 
 module.exports = mongoose.model('Usuario', UsuarioSchema);

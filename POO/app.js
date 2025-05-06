@@ -9,26 +9,26 @@ const Envio = require('./models/envios');
 const app = express();
 app.use(express.json());
 
-// Asignar crédito según plan
-const planes = {
-    plan30: { credito: 30 },
-    plan40: { credito: 40 },
-    plan60: { credito: 60 }
-  };
+// Paquetes disponibles.
+const paquetes = {
+    paquete30: { credito: 30 },
+    paquete40: { credito: 40 },
+    paquete60: { credito: 60 }
+};
 
-// 🔹 Crear un nuevo usuario (asignación directa del plan)
+// Creación de nuevos usuarios.
 app.post('/usuarios', async (req, res) => {
   try {
-    const { nombre, plan } = req.body;
+    const { nombre, paquete } = req.body;
 
-    if (!planes[plan]) {
-      return res.status(400).json({ error: 'Plan inválido' });
+    if (!paquetes[paquete]) {
+      return res.status(400).json({ error: 'Paquete inválido.' });
     }
 
     const nuevoUsuario = new Usuario({
       nombre,
-      plan,
-      credito: planes[plan].credito
+      paquete,
+      credito: paquetes[paquete].credito
     });
 
     await nuevoUsuario.save();
@@ -38,24 +38,24 @@ app.post('/usuarios', async (req, res) => {
   }
 });
 
-// 🔹 Ver todos los usuarios
+// Muestra todos los usuarios.
 app.get('/usuarios', async (req, res) => {
-    try {
-      const usuarios = await Usuario.find(); // Obtener todos los usuarios de la base de datos
-      res.json(usuarios); // Devolver los usuarios en formato JSON
-    } catch (err) {
-      res.status(500).json({ error: err.message }); // Manejar errores
-    }
-  });
+  try {
+    const usuarios = await Usuario.find(); 
+    res.json(usuarios); 
+  } catch (err) {
+    res.status(500).json({ error: err.message }); 
+  }
+});
 
-// 🔹 Ver crédito disponible de un usuario
+// Ver los créditos de un usuario.
 app.get('/usuarios/:id/credito', async (req, res) => {
   const usuario = await Usuario.findById(req.params.id);
-  if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
+  if (!usuario) return res.status(404).json({ error: 'Usuario no registrado, por favor verifique el id.' });
   res.json({ nombre: usuario.nombre, credito: usuario.credito });
 });
 
-// 🔹 Registrar un nuevo envío
+// Nuevos envíos.
 app.post('/envios', async (req, res) => {
   try {
     const {
@@ -69,19 +69,24 @@ app.post('/envios', async (req, res) => {
     } = req.body;
 
     const usuario = await Usuario.findById(usuario_id);
-    if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
+    if (!usuario) return res.status(404).json({ error: 'Usuario no registrado, por favor verifique el id.' });
 
-    if (usuario.credito <= 0) return res.status(400).json({ error: 'Sin crédito disponible' });
+    if (usuario.credito <= 0) return res.status(400).json({ error: 'El usuario no tiene crédito.' });
 
-    // Calcular precio según peso
-    let multiplicador = Math.ceil(producto.peso / 3);
-    const precios = { plan30: 135, plan40: 160, plan60: 180 };
-    const precioBase = precios[usuario.plan] / planes[usuario.plan].credito;
-    const precio_envio = precioBase * multiplicador;
+    // Calcular los créditos a descontar según el peso del producto.
+    const creditosConsumidos = Math.ceil(producto.peso / 3);
+    if (usuario.credito < creditosConsumidos) {
+      return res.status(400).json({ error: 'Crédito insuficiente para este envío.' });
+    }
+
+    // Calculando el valor del envío según su peso.
+    const precios = { paquete30: 135, paquete40: 160, paquete60: 180 };
+    const precioBase = precios[usuario.paquete] / paquetes[usuario.paquete].credito;
+    const precio_envio = precioBase * creditosConsumidos; 
 
     producto.precio_envio = precio_envio;
 
-    // Crear envío
+    // Crear el envío
     const nuevoEnvio = new Envio({
       usuario_id,
       nombre,
@@ -89,13 +94,14 @@ app.post('/envios', async (req, res) => {
       telefono,
       referencia,
       observacion,
-      producto
+      producto,
+      creditos_usados: creditosConsumidos
     });
 
     await nuevoEnvio.save();
 
-    // Descontar crédito
-    usuario.credito -= 1;
+    // Descontar los créditos del usuario
+    usuario.credito -= creditosConsumidos;
     await usuario.save();
 
     res.json(nuevoEnvio);
@@ -104,26 +110,28 @@ app.post('/envios', async (req, res) => {
   }
 });
 
-// 🔹 Consultar envíos de un usuario
+// Ver todos los envíos de un usuario.
 app.get('/envios/:usuario_id', async (req, res) => {
   const envios = await Envio.find({ usuario_id: req.params.usuario_id });
   res.json(envios);
 });
 
-// 🔹 Eliminar un envío y devolver el crédito
+// Eliminar envíos y devolver crédito.
 app.delete('/envios/:id', async (req, res) => {
   const envio = await Envio.findById(req.params.id);
-  if (!envio) return res.status(404).json({ error: 'Envío no encontrado' });
+  if (!envio) return res.status(404).json({ error: 'El envío no está registrado.' });
 
   const usuario = await Usuario.findById(envio.usuario_id);
   if (usuario) {
-    usuario.credito += 1;
+    usuario.credito += envio.creditos_usados;
     await usuario.save();
   }
 
   await envio.deleteOne();
-  res.json({ mensaje: 'Envío eliminado y crédito devuelto' });
+  res.json({ mensaje: `Envío eliminado correctamente, ${envio.creditos_usados} créditos reembolsados.` });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Servidor en http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`Servidor corriendo exitosamente`));
+
+
